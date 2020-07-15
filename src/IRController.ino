@@ -14,6 +14,9 @@
 #include <ArduinoOTA.h>
 #include "sha256.h"
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
 #include <Ticker.h>                                           // For LED status
 #include <TimeLib.h>
 
@@ -50,6 +53,15 @@ const char* fingerprint = "8D 83 C3 5F 0A 09 84 AE B0 64 39 23 8F 05 9E 4D 5E 08
 char static_ip[16] = "10.0.1.10";
 char static_gw[16] = "10.0.1.1";
 char static_sn[16] = "255.255.255.0";
+
+// GPIO where the DS18B20 is connected to
+const int oneWireBus = 12;
+
+// Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(oneWireBus);
+
+// Pass our oneWire reference to Dallas Temperature sensor
+DallasTemperature sensors(&oneWire);
 
 DynamicJsonDocument deviceState(1024);
 
@@ -831,6 +843,11 @@ void setup() {
   server->on("/", []() {
     Serial.println("Connection received");
     sendHomePage(); // 200
+  });
+
+  server->on("/temperature", []() {
+    Serial.println("Connection received");
+    sendTemperature(); // 200
   });
 
   server->begin();
@@ -1653,4 +1670,21 @@ void loop() {
     ticker.attach(0.5, disableLed);
   }
   delay(200);
+}
+
+float readTemperature(){
+  sensors.requestTemperatures();
+  float temperatureC = sensors.getTempCByIndex(0);
+  Serial.print(temperatureC);
+  Serial.println("ºC");
+  return temperatureC;
+}
+
+void sendTemperature() {
+  String temperature = String(readTemperature(), 2);
+  server->setContentLength(temperature.length() + 1);
+  server->send(200, "text/plain; charset=utf-8", "");
+  server->sendContent(temperature);
+  server->sendContent("\n");
+  server->client().stop();
 }
