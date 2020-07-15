@@ -531,6 +531,7 @@ void setup() {
     return;
 
   Serial.println("WiFi configuration complete");
+  WiFi.softAPdisconnect (true);
 
   if (strlen(host_name) > 0) {
     WiFi.hostname(host_name);
